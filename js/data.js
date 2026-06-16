@@ -1,3 +1,5 @@
+/* wrapped in an IIFE so top-level names don't collide across <script> files */
+(function () {
 /* =============================================================================
    data.js  —  THE FILE YOU EDIT MOST
    -----------------------------------------------------------------------------
@@ -189,3 +191,5 @@ window.GSDATA = {
   CATEGORIES, EXERCISES, FIELDS, RESULT_MARKERS, DEFAULT_GOALS,
   catColor, catLabel, catIcon,
 };
+
+})();

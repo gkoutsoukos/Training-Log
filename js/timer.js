@@ -1,3 +1,5 @@
+/* wrapped in an IIFE so top-level names don't collide across <script> files */
+(function () {
 /* =============================================================================
    timer.js  —  the training timer engine + whistle sound
    -----------------------------------------------------------------------------
@@ -141,3 +143,5 @@ class GSTimer {
 }
 
 window.GSTimerKit = { GSTimer, playWhistle, playSwitchCue };
+
+})();

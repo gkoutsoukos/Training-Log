@@ -1,3 +1,5 @@
+/* wrapped in an IIFE so top-level names don't collide across <script> files */
+(function () {
 /* =============================================================================
    storage.js  —  everything that touches localStorage
    -----------------------------------------------------------------------------
@@ -160,3 +162,5 @@ const DEMO_SESSIONS = [
     ],
   },
 ];
+
+})();
