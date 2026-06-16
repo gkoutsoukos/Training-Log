@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <!-- mobile-first: lock width to the device, allow it to sit under the notch -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+  <meta name="theme-color" content="#000000">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>GS Training Log</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- All screens render into #app; the tab bar is fixed at the bottom. -->
+  <main id="app"></main>
+  <nav id="tabbar" aria-label="Primary"></nav>
+
+  <!-- Load order matters: data → storage → timer → app.
+       No build step, no bundler — drop the folder on GitHub Pages and it runs. -->
+  <script src="js/data.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/timer.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
