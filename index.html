@@ -2,24 +2,1661 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <!-- mobile-first: lock width to the device, allow it to sit under the notch -->
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
   <meta name="theme-color" content="#000000">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>GS Training Log</title>
-  <link rel="stylesheet" href="css/style.css">
+  <style>
+/* =============================================================================
+   style.css  —  premium iOS-style dark theme
+   -----------------------------------------------------------------------------
+   COLORS LIVE IN data.js (per category). Global theme tokens are right below —
+   edit these to retune the whole look. Everything else derives from them.
+============================================================================= */
+
+:root {
+  /* surfaces */
+  --bg:        #000000;            /* app background */
+  --card:      #1C1C1E;            /* grouped card (iOS systemGray6 dark) */
+  --card-2:    #2C2C2E;            /* nested / pressed */
+  --hair:      #38383A;            /* hairline separators */
+  --tabbar:    rgba(20,20,22,.86); /* translucent tab bar */
+
+  /* text */
+  --text:      #FFFFFF;
+  --text-2:    #EBEBF5;
+  --muted:     #8E8E93;            /* iOS secondary label */
+  --muted-2:   #636366;
+
+  /* accents */
+  --blue:      #0A84FF;            /* iOS system blue — links & primary */
+  --red:       #FF453A;
+
+  /* metrics */
+  --radius:    14px;
+  --gap:       16px;
+  --maxw:      460px;              /* phone-width canvas, centered on desktop */
+
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, system-ui, sans-serif;
+  font-size: 16px; line-height: 1.35;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* phone canvas */
+#app {
+  max-width: var(--maxw); margin: 0 auto;
+  padding: 8px 16px calc(96px + env(safe-area-inset-bottom));
+  min-height: 100vh;
+}
+
+/* ---------- top bars ------------------------------------------------------ */
+.topbar { display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 2px 8px; gap: 8px; }
+.topbar.nav { padding-top: 14px; }
+.screen-title { font-size: 30px; font-weight: 800; letter-spacing: -0.4px; margin: 6px 0 2px; }
+.nav-title { font-size: 16px; font-weight: 600; margin: 0; text-align: center; flex: 1; }
+.back, .link { background: none; border: 0; color: var(--blue); font-size: 16px;
+  cursor: pointer; padding: 6px 2px; font-family: inherit; }
+.link.strong { font-weight: 600; }
+.link.danger, .danger { color: var(--red); }
+.round-add { width: 32px; height: 32px; border-radius: 50%; border: 0; cursor: pointer;
+  background: var(--blue); color: #fff; font-size: 22px; line-height: 1; font-weight: 300;
+  display: grid; place-items: center; }
+.round-add:active { transform: scale(.92); }
+
+/* ---------- grouped sections ---------------------------------------------- */
+.group { margin: 10px 0 22px; }
+.group-label { color: var(--muted); font-size: 13px; font-weight: 600; letter-spacing: .4px;
+  text-transform: uppercase; margin: 0 6px 8px; }
+.group-label.row-label { display: flex; justify-content: space-between; align-items: baseline; }
+.group-label.foot { text-transform: none; text-align: center; color: var(--muted-2);
+  letter-spacing: 0; font-weight: 500; margin-top: 18px; }
+
+.card { background: var(--card); border-radius: var(--radius); overflow: hidden; }
+.card + .card { margin-top: 14px; }
+
+/* ---------- overview (3 stat cells) --------------------------------------- */
+.overview { display: grid; grid-template-columns: repeat(3, 1fr); }
+.ov-cell { padding: 16px 8px; text-align: center; border-right: 1px solid var(--hair); }
+.ov-cell:last-child { border-right: 0; }
+.ov-icon { font-size: 15px; margin-bottom: 6px; }
+.ov-num { font-size: 30px; font-weight: 800; letter-spacing: -1px; }
+.ov-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+/* ---------- key metrics + sparklines -------------------------------------- */
+.metric { display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px; border-bottom: 1px solid var(--hair); gap: 12px; }
+.metric:last-child { border-bottom: 0; }
+.metric-label { color: var(--muted); font-size: 13px; }
+.metric-val { font-size: 26px; font-weight: 700; letter-spacing: -.5px; margin-top: 2px; }
+.metric-unit { font-size: 14px; color: var(--muted); font-weight: 600; margin-left: 3px; }
+.spark { width: 96px; height: 34px; opacity: .95; }
+
+/* ---------- list rows ----------------------------------------------------- */
+.list .li { border-bottom: 1px solid var(--hair); }
+.list .li:last-child { border-bottom: 0; }
+.li { display: flex; align-items: center; gap: 12px; padding: 13px 16px; width: 100%;
+  text-align: left; background: none; border: 0; color: var(--text); font: inherit; }
+.li.tap { cursor: pointer; }
+.li.tap:active { background: var(--card-2); }
+.li-glyph { font-size: 14px; }
+.li-date, .li-glyph { width: 34px; color: var(--muted); font-size: 13px; flex-shrink: 0; }
+.li-main { flex: 1; min-width: 0; }
+.li-title { font-size: 15px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.li-sub { font-size: 12px; color: var(--muted); margin-top: 1px; }
+.li-value { font-weight: 700; font-size: 16px; }
+.chev { color: var(--muted-2); font-size: 18px; margin-left: 2px; }
+.empty { padding: 18px 16px; color: var(--muted); font-size: 14px; text-align: center; }
+
+/* ---------- goal bars ----------------------------------------------------- */
+.goal { padding: 14px 16px; border-bottom: 1px solid var(--hair); position: relative; }
+.goal:last-child { border-bottom: 0; }
+.goal-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; gap: 8px; }
+.goal-label { font-size: 14px; font-weight: 500; }
+.goal-nums { font-size: 13px; color: var(--text-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.goal-unit { color: var(--muted); }
+.bar { height: 7px; background: var(--card-2); border-radius: 99px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 99px; transition: width .5s cubic-bezier(.2,.7,.2,1); }
+.goal.editable { padding-right: 40px; }
+.goal-del { position: absolute; top: 10px; right: 10px; width: 24px; height: 24px; border-radius: 50%;
+  border: 0; background: var(--card-2); color: var(--muted); font-size: 16px; cursor: pointer; }
+.goal-edit { display: flex; gap: 14px; margin-top: 10px; }
+.goal-edit label { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+
+/* ---------- key/value (session header) ------------------------------------ */
+.kv .kv-row { display: flex; justify-content: space-between; padding: 12px 16px;
+  border-bottom: 1px solid var(--hair); }
+.kv .kv-row:last-child { border-bottom: 0; }
+.kv-k { color: var(--muted); font-size: 14px; }
+.kv-v { font-weight: 600; font-size: 14px; }
+.kv-notes { padding: 12px 16px; color: var(--text-2); font-size: 14px; border-top: 1px solid var(--hair);
+  white-space: pre-wrap; }
+
+/* ---------- exercise cards (review) --------------------------------------- */
+.card.ex { padding: 14px 16px; }
+.ex-head { display: flex; align-items: center; gap: 9px; margin-bottom: 12px; }
+.ex-glyph { font-size: 14px; }
+.ex-name { font-weight: 700; font-size: 17px; letter-spacing: -.2px; flex: 1; }
+.marker { color: #001; font-weight: 800; font-size: 12px; padding: 3px 9px; border-radius: 7px; }
+.stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; }
+.stat-grid.wide { grid-template-columns: 1fr 1fr; gap: 16px; margin: 18px 0 24px; }
+.stat-k { color: var(--muted); font-size: 12px; }
+.stat-v { font-weight: 600; font-size: 15px; margin-top: 1px; }
+.ex-remarks { margin-top: 12px; padding-top: 11px; border-top: 1px solid var(--hair);
+  color: var(--text-2); font-size: 13.5px; line-height: 1.5; }
+
+/* ---------- forms --------------------------------------------------------- */
+.form .field { display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 11px 16px; border-bottom: 1px solid var(--hair); min-height: 48px; }
+.form .field:last-child { border-bottom: 0; }
+.field.col { flex-direction: column; align-items: stretch; gap: 8px; }
+.field-label { color: var(--text); font-size: 15px; flex-shrink: 0; }
+.field.col .field-label { color: var(--muted); font-size: 13px; }
+.field-control { display: flex; align-items: center; gap: 6px; flex: 1; justify-content: flex-end; }
+.field-input { background: none; border: 0; color: var(--text); font: inherit; font-size: 15px;
+  text-align: right; min-width: 0; width: 100%; padding: 4px 0; }
+.field-input.num { font-variant-numeric: tabular-nums; }
+.field-input.select { text-align: right; -webkit-appearance: none; appearance: none; color: var(--text);
+  text-align-last: right; }
+.field-input::placeholder { color: var(--muted-2); }
+.field-input:focus { outline: none; }
+.suffix { color: var(--muted); font-size: 14px; flex-shrink: 0; }
+.ta { width: 100%; background: none; border: 0; color: var(--text); font: inherit; font-size: 15px;
+  resize: vertical; min-height: 76px; padding: 6px 0; }
+.ta:focus { outline: none; }
+.ta::placeholder { color: var(--muted-2); }
+
+/* dual inputs (mm:ss, work/rest) */
+.dual { display: flex; align-items: center; gap: 6px; }
+.mini { width: 52px; background: var(--card-2); border: 0; border-radius: 8px; color: var(--text);
+  font: inherit; font-size: 15px; text-align: center; padding: 7px 4px; font-variant-numeric: tabular-nums; }
+.mini.wide { width: 72px; }
+.mini:focus { outline: 1.5px solid var(--blue); }
+.sep { color: var(--muted); }
+
+/* result markers */
+.markers { display: flex; gap: 8px; }
+.mk { width: 40px; height: 32px; border-radius: 8px; border: 1.5px solid var(--hair);
+  background: var(--card-2); color: var(--muted); font-weight: 800; font-size: 13px; cursor: pointer; }
+.mk.on { background: var(--c); border-color: var(--c); color: #001; }
+
+/* ---------- segmented control (session type) ----------------------------- */
+.seg { display: flex; background: var(--card); border-radius: 11px; padding: 3px; gap: 2px; }
+.seg-btn { flex: 1; border: 0; background: none; color: var(--muted); font: inherit; font-size: 13px;
+  font-weight: 600; padding: 9px 4px; border-radius: 9px; cursor: pointer; }
+.seg-btn.on { background: var(--c); color: #001; }
+
+/* ---------- category tabs (add exercise) ---------------------------------- */
+.cat-tabs { display: flex; gap: 6px; overflow-x: auto; padding: 6px 2px 14px; scrollbar-width: none; }
+.cat-tabs::-webkit-scrollbar { display: none; }
+.cat-tab { flex: 1 0 auto; min-width: 64px; border: 1px solid var(--hair); background: var(--card);
+  color: var(--muted); border-radius: 12px; padding: 10px 6px; font: inherit; font-size: 12px;
+  font-weight: 600; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.cat-tab .cat-glyph { font-size: 16px; }
+.cat-tab.on { border-color: var(--c); color: #fff; box-shadow: inset 0 0 0 1px var(--c); }
+
+/* ---------- buttons ------------------------------------------------------- */
+.actions { margin-top: 8px; }
+.actions.tight { margin-top: 0; }
+.btn { width: 100%; border: 0; border-radius: 13px; padding: 15px; font: inherit; font-size: 17px;
+  font-weight: 600; cursor: pointer; background: var(--card-2); color: var(--text); }
+.btn:active { transform: scale(.985); }
+.btn.primary { background: var(--blue); color: #fff; }
+.btn.ghost { background: transparent; border: 1.5px solid var(--c, var(--hair)); color: var(--c, var(--text)); }
+.btn.sm { width: auto; padding: 8px 14px; font-size: 14px; border-radius: 9px; }
+.btn.big { font-size: 22px; font-weight: 800; padding: 20px; background: var(--c); color: #001;
+  letter-spacing: 1px; }
+.btn.end { background: var(--card-2); color: var(--red); margin-top: 14px; }
+
+/* ---------- GS timer: ready ----------------------------------------------- */
+.timer-ready { text-align: center; padding: 20px 8px; }
+.ready-word { color: var(--muted); letter-spacing: 6px; font-weight: 700; font-size: 14px; }
+.ready-ex { font-size: 28px; font-weight: 800; margin-top: 18px; letter-spacing: -.3px; }
+.ready-weight { font-size: 17px; color: var(--text-2); margin-top: 2px; }
+.ready-config { display: flex; justify-content: center; gap: 22px; margin: 24px 0 6px; }
+.ready-config label { color: var(--muted); font-size: 12px; display: flex; flex-direction: column;
+  align-items: center; gap: 8px; }
+.ready-pace { color: var(--muted); font-size: 14px; margin: 8px 0 26px; }
+.ready-hint { color: var(--muted-2); font-size: 12px; margin-top: 14px; }
+
+/* ---------- GS timer: live ------------------------------------------------ */
+.timer-live { text-align: center; padding: 24px 8px; }
+.live-ex { color: var(--muted); font-size: 14px; }
+.live-clock { font-size: 92px; font-weight: 800; letter-spacing: -3px; margin: 6px 0 18px;
+  font-variant-numeric: tabular-nums; color: var(--c); line-height: 1; }
+.live-clock.flash { animation: flash .5s steps(2,jump-none) infinite; }
+@keyframes flash { 50% { opacity: .35; } }
+.live-row { display: flex; justify-content: space-around; margin: 8px 0 18px; }
+.ls-num { font-size: 30px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.ls-lab { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .5px; }
+.live-target { color: var(--muted); font-size: 14px; margin-bottom: 24px; }
+.rep-btn { width: 100%; border: 0; border-radius: 18px; padding: 34px; font: inherit; font-size: 28px;
+  font-weight: 800; letter-spacing: 1px; background: var(--c); color: #001; cursor: pointer; }
+.rep-btn:active { transform: scale(.97); filter: brightness(1.1); }
+
+/* ---------- GS timer: done ------------------------------------------------ */
+.timer-done { text-align: center; padding: 28px 12px; }
+.done-check { font-size: 64px; font-weight: 800; }
+
+/* ---------- iOS switch ---------------------------------------------------- */
+.switch { position: relative; width: 51px; height: 31px; flex-shrink: 0; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider { position: absolute; inset: 0; background: var(--card-2); border-radius: 99px; transition: .2s; }
+.slider::before { content: ""; position: absolute; width: 27px; height: 27px; left: 2px; top: 2px;
+  background: #fff; border-radius: 50%; transition: .2s; box-shadow: 0 1px 3px rgba(0,0,0,.4); }
+.switch input:checked + .slider { background: var(--blue); }
+.switch input:checked + .slider::before { transform: translateX(20px); }
+
+/* ---------- tab bar ------------------------------------------------------- */
+#tabbar { position: fixed; bottom: 0; left: 0; right: 0; z-index: 50;
+  display: flex; justify-content: space-around;
+  background: var(--tabbar); backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border-top: 1px solid var(--hair);
+  padding: 8px 4px calc(8px + env(safe-area-inset-bottom)); }
+.tab { background: none; border: 0; cursor: pointer; color: var(--muted-2);
+  display: flex; flex-direction: column; align-items: center; gap: 3px; flex: 1; font: inherit; }
+.tab-icon { font-size: 20px; line-height: 1; }
+.tab-label { font-size: 10px; font-weight: 500; }
+.tab.on { color: var(--blue); }
+
+/* ---------- desktop niceties --------------------------------------------- */
+@media (min-width: 480px) {
+  body { background: #0a0a0b; }
+  #app { border-left: 1px solid var(--hair); border-right: 1px solid var(--hair); min-height: 100vh; }
+  #tabbar { max-width: var(--maxw); margin: 0 auto; }
+}
+
+/* respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before { animation: none !important; transition: none !important; }
+}
+
+  </style>
 </head>
 <body>
-  <!-- All screens render into #app; the tab bar is fixed at the bottom. -->
   <main id="app"></main>
   <nav id="tabbar" aria-label="Primary"></nav>
+  <script>
+/* SINGLE-FILE BUILD — HTML, CSS and JS all in this one file.
+   To edit exercises / goals / colors, find the "data.js" section in the JS below. */
+/* wrapped in an IIFE so top-level names don't collide across <script> files */
+(function () {
+/* =============================================================================
+   data.js  —  THE FILE YOU EDIT MOST
+   -----------------------------------------------------------------------------
+   Everything that defines WHAT you train and HOW it is measured lives here.
+   No app logic — just data. Change things here and the whole app updates.
 
-  <!-- Load order matters: data → storage → timer → app.
-       No build step, no bundler — drop the folder on GitHub Pages and it runs. -->
-  <script src="js/data.js"></script>
-  <script src="js/storage.js"></script>
-  <script src="js/timer.js"></script>
-  <script src="js/app.js"></script>
+   Sections:
+     1. CATEGORIES   → the 5 training types + their colors + icons
+     2. EXERCISES    → the list of movements inside each category
+     3. FIELDS       → which input fields each category shows (dynamic form)
+     4. GOALS        → your targets, shown as progress bars on the Dashboard
+============================================================================= */
+
+
+/* -----------------------------------------------------------------------------
+   1. CATEGORIES
+   -----------------------------------------------------------------------------
+   key      → internal id (don't put spaces here)
+   label    → what you see in the UI
+   color    → the accent color for this category (hex). Change these freely.
+   icon     → an emoji used as a quick glyph (swap for any emoji you like)
+
+   To recolor the whole app by category, just edit `color` below.
+----------------------------------------------------------------------------- */
+const CATEGORIES = {
+  gs:        { key: 'gs',        label: 'GS',        color: '#34C759', icon: '🟢' }, // Kettlebell Sport — green
+  strength:  { key: 'strength',  label: 'Strength',  color: '#FF9F0A', icon: '🟠' }, // orange
+  gpp:       { key: 'gpp',       label: 'GPP',       color: '#0A84FF', icon: '🔵' }, // blue
+  accessory: { key: 'accessory', label: 'Accessory', color: '#FFD60A', icon: '🟡' }, // yellow
+  technique: { key: 'technique', label: 'Technique', color: '#BF5AF2', icon: '🟣' }, // purple
+};
+
+
+/* -----------------------------------------------------------------------------
+   2. EXERCISES
+   -----------------------------------------------------------------------------
+   Just arrays of names per category. Add or remove freely.
+----------------------------------------------------------------------------- */
+const EXERCISES = {
+  gs: [
+    'Long Cycle',
+    'Snatch',
+    'Jerk',
+  ],
+  strength: [
+    'Back Squat',
+    'Front Squat',
+    'Deadlift',
+    'Clean',
+    'Press',
+    'Push Press',
+    'Jerk',
+    'Row',
+    'Snatch',
+    'Overhead Squat',
+  ],
+  gpp: [
+    'Rowing',
+    'KB Flows',
+    'Pull-ups',
+    'Dips',
+    'Push-ups',
+    'Jump Squats',
+    'Hanging',
+    'Carries',
+  ],
+  accessory: [
+    'Swing',
+    'Bump Jerk',
+    'Push Press',
+    'Other',
+  ],
+  technique: [
+    'Long Cycle',
+    'Snatch',
+    'Jerk',
+    'Other',
+  ],
+};
+
+
+/* -----------------------------------------------------------------------------
+   3. FIELDS  (the dynamic form)
+   -----------------------------------------------------------------------------
+   Each category lists the input fields shown on the "Add Exercise" screen.
+   The form rebuilds itself from this list, so adding a field here is enough.
+
+   Each field:
+     key         → where the value is stored (no spaces)
+     label       → text shown next to the input
+     type        → 'number' | 'text' | 'duration' | 'select' | 'rpe' | 'result' | 'textarea'
+     unit        → small grey unit text (optional, e.g. 'kg', 'sec')
+     placeholder → ghost text (optional)
+     options     → only for 'select' type
+
+   Special types explained:
+     'duration' → shows two boxes mm : ss
+     'rpe'      → number capped 1–10, shows "/10"
+     'result'   → the PR / ↑ / → / ↓ marker buttons
+     'textarea' → multi-line remarks box
+----------------------------------------------------------------------------- */
+const FIELDS = {
+  gs: [
+    { key: 'weight',   label: 'Weight',            type: 'number',   unit: 'kg', placeholder: '24' },
+    { key: 'duration', label: 'Duration',          type: 'duration' },
+    { key: 'workRest', label: 'Work / Rest',       type: 'workrest' },           // intervals (optional)
+    { key: 'rpm',      label: 'RPM (avg)',         type: 'number',   placeholder: '7' },
+    { key: 'reps',     label: 'Reps',              type: 'number',   placeholder: '70' },
+    { key: 'rpe',      label: 'RPE',               type: 'rpe' },
+    { key: 'result',   label: 'Result',            type: 'result' },
+    { key: 'remarks',  label: 'Remarks',           type: 'textarea', placeholder: 'Rack position, grip, pace…' },
+  ],
+  strength: [
+    { key: 'weight',  label: 'Weight',  type: 'number',   unit: 'kg', placeholder: '100' },
+    { key: 'sets',    label: 'Sets',    type: 'number',   placeholder: '5' },
+    { key: 'reps',    label: 'Reps',    type: 'number',   placeholder: '5' },
+    { key: 'rest',    label: 'Rest',    type: 'number',   unit: 'sec', placeholder: '180' },
+    { key: 'rpe',     label: 'RPE',     type: 'rpe' },
+    { key: 'result',  label: 'Result',  type: 'result' },
+    { key: 'remarks', label: 'Remarks', type: 'textarea', placeholder: 'Cues, bar speed, notes…' },
+  ],
+  gpp: [
+    { key: 'weight',   label: 'Weight',         type: 'number',   unit: 'kg', placeholder: '—' },
+    { key: 'sets',     label: 'Sets',           type: 'number',   placeholder: '3' },
+    { key: 'reps',     label: 'Reps',           type: 'number',   placeholder: '12' },
+    { key: 'distance', label: 'Distance / Time', type: 'text',    placeholder: '500m or 2:00' },
+    { key: 'rest',     label: 'Rest',           type: 'number',   unit: 'sec', placeholder: '60' },
+    { key: 'remarks',  label: 'Remarks',        type: 'textarea', placeholder: 'How it felt…' },
+  ],
+  accessory: [
+    { key: 'weight',  label: 'Weight',  type: 'number',   unit: 'kg', placeholder: '24' },
+    { key: 'sets',    label: 'Sets',    type: 'number',   placeholder: '3' },
+    { key: 'reps',    label: 'Reps',    type: 'number',   placeholder: '10' },
+    { key: 'rest',    label: 'Rest',    type: 'number',   unit: 'sec', placeholder: '60' },
+    { key: 'remarks', label: 'Remarks', type: 'textarea', placeholder: 'Notes…' },
+  ],
+  // Technique is light on numbers, heavy on observation.
+  technique: [
+    { key: 'focus',        label: 'Focus',       type: 'text',     placeholder: 'e.g. fixation timing' },
+    { key: 'quality',      label: 'Quality',     type: 'rpe' },                 // reuse 1–10 scale as a quality rating
+    { key: 'observations', label: 'Observations', type: 'textarea', placeholder: 'What you noticed…' },
+    { key: 'nextAction',   label: 'Next action', type: 'textarea', placeholder: 'What to fix next time…' },
+  ],
+};
+
+
+/* -----------------------------------------------------------------------------
+   RESULT MARKERS
+   -----------------------------------------------------------------------------
+   The PR / ↑ / → / ↓ buttons. Order = order shown.
+----------------------------------------------------------------------------- */
+const RESULT_MARKERS = [
+  { key: 'pr',   label: 'PR', color: '#34C759' },
+  { key: 'up',   label: '↑',  color: '#0A84FF' },
+  { key: 'same', label: '→',  color: '#8E8E93' },
+  { key: 'down', label: '↓',  color: '#FF453A' },
+];
+
+
+/* -----------------------------------------------------------------------------
+   4. GOALS  (Dashboard progress bars)
+   -----------------------------------------------------------------------------
+   These are your seeded starting goals. You can also add/edit goals in-app on
+   the Progress screen — those are saved to localStorage and merged with these.
+
+   label    → text shown
+   category → drives the bar color (use a CATEGORIES key)
+   current  → where you are now
+   target   → where you want to be
+   unit     → small label after the numbers (e.g. 'reps', 'kg')
+----------------------------------------------------------------------------- */
+const DEFAULT_GOALS = [
+  { id: 'g1', label: "Long Cycle 24kg 10'", category: 'gs',       current: 64,  target: 70,  unit: 'reps' },
+  { id: 'g2', label: "Snatch 24kg 10'",     category: 'gs',       current: 165, target: 180, unit: 'reps' },
+  { id: 'g3', label: 'Deadlift x5',         category: 'strength', current: 150, target: 160, unit: 'kg' },
+  { id: 'g4', label: 'Pull-ups BW+20 x5',   category: 'strength', current: 4,   target: 5,   unit: 'reps' },
+];
+
+
+/* -----------------------------------------------------------------------------
+   Helpers used across the app — no need to edit.
+----------------------------------------------------------------------------- */
+function catColor(key)  { return (CATEGORIES[key] || {}).color || '#8E8E93'; }
+function catLabel(key)  { return (CATEGORIES[key] || {}).label || key; }
+function catIcon(key)   { return (CATEGORIES[key] || {}).icon  || '•'; }
+
+// Expose everything globally (simple, no build step needed for GitHub Pages).
+window.GSDATA = {
+  CATEGORIES, EXERCISES, FIELDS, RESULT_MARKERS, DEFAULT_GOALS,
+  catColor, catLabel, catIcon,
+};
+
+})();
+
+;
+/* wrapped in an IIFE so top-level names don't collide across <script> files */
+(function () {
+/* =============================================================================
+   storage.js  —  everything that touches localStorage
+   -----------------------------------------------------------------------------
+   The whole app state lives under three keys:
+     gslog.sessions   → array of saved training sessions
+     gslog.goals      → array of goals (your edits override the defaults)
+     gslog.settings   → small object (e.g. timer whistle on/off)
+
+   Nothing here renders UI. It only reads/writes data and hands it back.
+   Export/Import JSON lives at the bottom.
+============================================================================= */
+
+const KEYS = {
+  sessions: 'gslog.sessions',
+  goals:    'gslog.goals',
+  settings: 'gslog.settings',
+};
+
+/* ---- low-level read/write (safe against corrupt JSON) -------------------- */
+function read(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch (e) {
+    console.warn('Bad data in', key, '— resetting.', e);
+    return fallback;
+  }
+}
+function write(key, value) {
+  localStorage.setItem(key, JSON.stringify(value));
+}
+
+/* ---- ids & dates --------------------------------------------------------- */
+function uid() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
+/* ---- SESSIONS ------------------------------------------------------------ */
+function getSessions() {
+  // newest first
+  return read(KEYS.sessions, []).sort((a, b) => new Date(b.date) - new Date(a.date));
+}
+function getSession(id) {
+  return getSessions().find(s => s.id === id) || null;
+}
+function saveSession(session) {
+  const all = read(KEYS.sessions, []);
+  const i = all.findIndex(s => s.id === session.id);
+  if (i >= 0) all[i] = session;       // update existing
+  else        all.push(session);      // add new
+  write(KEYS.sessions, all);
+  return session;
+}
+function deleteSession(id) {
+  write(KEYS.sessions, read(KEYS.sessions, []).filter(s => s.id !== id));
+}
+
+/* ---- GOALS --------------------------------------------------------------- */
+// If the user has never touched goals, seed with the defaults from data.js.
+function getGoals() {
+  const stored = read(KEYS.goals, null);
+  if (stored) return stored;
+  const seeded = window.GSDATA.DEFAULT_GOALS.slice();
+  write(KEYS.goals, seeded);
+  return seeded;
+}
+function saveGoal(goal) {
+  const all = getGoals();
+  const i = all.findIndex(g => g.id === goal.id);
+  if (i >= 0) all[i] = goal; else all.push(goal);
+  write(KEYS.goals, all);
+  return goal;
+}
+function deleteGoal(id) {
+  write(KEYS.goals, getGoals().filter(g => g.id !== id));
+}
+
+/* ---- SETTINGS ------------------------------------------------------------ */
+function getSettings() {
+  return read(KEYS.settings, { whistle: true, switchWhistle: false });
+}
+function saveSettings(patch) {
+  const next = Object.assign(getSettings(), patch);
+  write(KEYS.settings, next);
+  return next;
+}
+
+/* ---- EXPORT / IMPORT  (the "later" feature, ready to go) ----------------- */
+function exportJSON() {
+  return JSON.stringify({
+    exportedAt: new Date().toISOString(),
+    sessions: read(KEYS.sessions, []),
+    goals: getGoals(),
+    settings: getSettings(),
+  }, null, 2);
+}
+function importJSON(text) {
+  const data = JSON.parse(text);
+  if (data.sessions) write(KEYS.sessions, data.sessions);
+  if (data.goals)    write(KEYS.goals, data.goals);
+  if (data.settings) write(KEYS.settings, data.settings);
+}
+
+/* ---- DEMO SEED  (so a fresh app looks alive, like the mockup) ------------ */
+// Runs once. Delete this call in app.js if you want to start empty.
+function seedDemoIfEmpty() {
+  if (read(KEYS.sessions, []).length) return;
+  write(KEYS.sessions, DEMO_SESSIONS);
+}
+
+window.GSStore = {
+  uid,
+  getSessions, getSession, saveSession, deleteSession,
+  getGoals, saveGoal, deleteGoal,
+  getSettings, saveSettings,
+  exportJSON, importJSON,
+  seedDemoIfEmpty,
+};
+
+/* -----------------------------------------------------------------------------
+   Demo data — mirrors the numbers in your mockup. Safe to delete.
+----------------------------------------------------------------------------- */
+const DEMO_SESSIONS = [
+  {
+    id: 'demo8', date: '2026-06-08', type: 'gs', duration: 3504,
+    sleep: 8, energy: 7, bodyweight: 90.8, notes: 'Felt strong and focused.',
+    exercises: [
+      { id: 'e1', category: 'gs', exercise: 'Long Cycle',
+        params: { weight: 24, duration: 600, rpm: 7, reps: 70, rpe: 8 },
+        result: 'pr', remarks: 'Rack position much better.\nGrip faded in the last 2 minutes.' },
+      { id: 'e2', category: 'gs', exercise: 'Snatch',
+        params: { weight: 24, duration: 600, rpm: 18, reps: 165, rpe: 8 },
+        result: 'up', remarks: 'Smooth sets.\nLost a few reps on left side.' },
+    ],
+  },
+  {
+    id: 'demo7', date: '2026-06-07', type: 'strength', duration: 3360,
+    sleep: 7, energy: 7, bodyweight: 90.5, notes: 'Upper focus.',
+    exercises: [
+      { id: 'e3', category: 'strength', exercise: 'Push Press',
+        params: { weight: 70, sets: 5, reps: 5, rest: 180, rpe: 8 }, result: 'up', remarks: '' },
+      { id: 'e4', category: 'strength', exercise: 'Pull-ups',
+        params: { weight: 20, sets: 5, reps: 5, rest: 120, rpe: 9 }, result: 'pr', remarks: 'BW+20.' },
+    ],
+  },
+  {
+    id: 'demo6', date: '2026-06-06', type: 'strength', duration: 3720,
+    sleep: 6, energy: 6, bodyweight: 90.9, notes: 'Lower focus.',
+    exercises: [
+      { id: 'e5', category: 'strength', exercise: 'Deadlift',
+        params: { weight: 150, sets: 1, reps: 5, rest: 240, rpe: 9 }, result: 'pr', remarks: '' },
+    ],
+  },
+  {
+    id: 'demo4', date: '2026-06-04', type: 'gpp', duration: 2520,
+    sleep: 7, energy: 8, bodyweight: 90.6, notes: 'Conditioning.',
+    exercises: [
+      { id: 'e6', category: 'gpp', exercise: 'Rowing',
+        params: { distance: '2000m', rest: 0 }, result: '', remarks: 'Steady pace.' },
+    ],
+  },
+];
+
+})();
+
+;
+/* wrapped in an IIFE so top-level names don't collide across <script> files */
+(function () {
+/* =============================================================================
+   timer.js  —  the training timer engine + whistle sound
+   -----------------------------------------------------------------------------
+   Two things live here:
+     1. Whistle  → a referee-style whistle. By default it is SYNTHESIZED with the
+                   Web Audio API so the app needs NO sound file and works offline.
+                   If you drop a real file at assets/sounds/whistle.mp3 it will be
+                   used instead automatically (see USE_MP3 below).
+     2. Timer    → a small reusable countdown/count-up engine used by the GS timer
+                   and (later) interval / EMOM / rest modes.
+
+   The GS timer UI itself is wired up in app.js — this file only does the timing
+   and sound so it stays testable and reusable.
+============================================================================= */
+
+/* -----------------------------------------------------------------------------
+   WHISTLE
+----------------------------------------------------------------------------- */
+const USE_MP3 = false;                       // flip to true after adding a real mp3
+const MP3_PATH = 'assets/sounds/whistle.mp3';
+
+let _audioCtx = null;
+let _mp3 = null;
+
+function _ctx() {
+  if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (_audioCtx.state === 'suspended') _audioCtx.resume();   // unlock on iOS after a tap
+  return _audioCtx;
+}
+
+// A short two-tone referee whistle, synthesized. Good enough for a gym app and
+// avoids shipping/hosting a binary asset on GitHub Pages.
+function _synthWhistle(durationMs = 550) {
+  const ctx = _ctx();
+  const now = ctx.currentTime;
+  const dur = durationMs / 1000;
+
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  const lfo = ctx.createOscillator();     // the "trill" that makes it sound like a whistle
+  const lfoGain = ctx.createGain();
+
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(2300, now);
+  lfo.type = 'sine';
+  lfo.frequency.setValueAtTime(28, now);  // flutter speed
+  lfoGain.gain.setValueAtTime(120, now);  // flutter depth (Hz)
+
+  lfo.connect(lfoGain).connect(osc.frequency);
+
+  // quick attack, short sustain, fast release
+  gain.gain.setValueAtTime(0.0001, now);
+  gain.gain.exponentialRampToValueAtTime(0.35, now + 0.02);
+  gain.gain.setValueAtTime(0.35, now + dur - 0.08);
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+
+  osc.connect(gain).connect(ctx.destination);
+  osc.start(now);  lfo.start(now);
+  osc.stop(now + dur); lfo.stop(now + dur);
+}
+
+function playWhistle() {
+  if (!window.GSStore.getSettings().whistle) return;   // respect the setting
+  if (USE_MP3) {
+    if (!_mp3) { _mp3 = new Audio(MP3_PATH); }
+    _mp3.currentTime = 0;
+    _mp3.play().catch(() => _synthWhistle());           // fall back if file missing
+  } else {
+    _synthWhistle();
+  }
+}
+
+// A lighter, single beep for the optional hand-switch cue at the half.
+function playSwitchCue() {
+  if (!window.GSStore.getSettings().switchWhistle) return;
+  _synthWhistle(220);
+}
+
+/* -----------------------------------------------------------------------------
+   TIMER ENGINE
+   -----------------------------------------------------------------------------
+   new GSTimer({ mode, target, onTick, onHalf, onDone })
+     mode   → 'down' (count toward 0 from target) or 'up' (count from 0)
+     target → seconds (used by 'down', and as the set length for the half cue)
+     onTick(elapsedSec, remainingSec) → called ~10x/sec for a smooth display
+     onHalf()  → fired once when the set passes the halfway point (hand switch)
+     onDone()  → fired when a 'down' timer reaches 0
+----------------------------------------------------------------------------- */
+class GSTimer {
+  constructor({ mode = 'down', target = 600, onTick, onHalf, onDone } = {}) {
+    this.mode = mode;
+    this.target = target;
+    this.onTick = onTick || (() => {});
+    this.onHalf = onHalf || (() => {});
+    this.onDone = onDone || (() => {});
+    this._raf = null;
+    this._startAt = 0;
+    this._halfFired = false;
+    this.running = false;
+  }
+
+  start() {
+    if (this.running) return;
+    this.running = true;
+    this._startAt = performance.now();
+    this._loop();
+  }
+
+  _loop() {
+    const tick = () => {
+      if (!this.running) return;
+      const elapsed = (performance.now() - this._startAt) / 1000;
+      const remaining = Math.max(0, this.target - elapsed);
+
+      if (!this._halfFired && elapsed >= this.target / 2) {
+        this._halfFired = true;
+        this.onHalf();
+      }
+      this.onTick(elapsed, remaining);
+
+      if (this.mode === 'down' && remaining <= 0) {
+        this.stop();
+        this.onDone();
+        return;
+      }
+      this._raf = requestAnimationFrame(tick);
+    };
+    this._raf = requestAnimationFrame(tick);
+  }
+
+  stop() {
+    this.running = false;
+    if (this._raf) cancelAnimationFrame(this._raf);
+    this._raf = null;
+  }
+
+  // seconds elapsed right now (used when the athlete ends a set early)
+  elapsed() {
+    return this.running ? (performance.now() - this._startAt) / 1000 : 0;
+  }
+}
+
+window.GSTimerKit = { GSTimer, playWhistle, playSwitchCue };
+
+})();
+
+;
+/* =============================================================================
+   app.js  —  the application: navigation, screens, and event wiring
+   -----------------------------------------------------------------------------
+   This is the "engine room". You normally edit data.js (what you train) and
+   style.css (how it looks) far more than this file.
+
+   Architecture (deliberately tiny, no framework, no build step):
+     • One <div id="app"> that we re-render per screen.
+     • navigate(view, params) sets the screen and calls render().
+     • Each screen has a render function returning an HTML string, then we wire
+       up its buttons. State lives in localStorage via GSStore (storage.js).
+
+   Screens: dashboard · sessions · session · newSession · addExercise ·
+            timer · progress · more
+============================================================================= */
+
+const { CATEGORIES, EXERCISES, FIELDS, RESULT_MARKERS, catColor, catLabel, catIcon } = window.GSDATA;
+const Store = window.GSStore;
+const { GSTimer, playWhistle, playSwitchCue } = window.GSTimerKit;
+
+const appEl = document.getElementById('app');
+const tabbarEl = document.getElementById('tabbar');
+
+let state = { view: 'dashboard', params: {} };
+let liveTimer = null;        // active GSTimer instance (timer screen)
+
+/* ---------- tiny helpers -------------------------------------------------- */
+const $  = (sel, root = document) => root.querySelector(sel);
+const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+
+function navigate(view, params = {}) {
+  if (liveTimer) { liveTimer.stop(); liveTimer = null; }   // never leave a timer running
+  state = { view, params };
+  render();
+  window.scrollTo(0, 0);
+}
+
+/* ---------- formatters ---------------------------------------------------- */
+function pad(n) { return String(n).padStart(2, '0'); }
+function fmtClock(totalSec) {                       // 600 → "10:00"
+  totalSec = Math.max(0, Math.round(totalSec));
+  return `${pad(Math.floor(totalSec / 60))}:${pad(totalSec % 60)}`;
+}
+function fmtDuration(sec) {                          // 3504 → "58:24"
+  return fmtClock(sec);
+}
+function fmtDateShort(iso) {                         // "2026-06-08" → "Jun 8"
+  const d = new Date(iso + 'T00:00:00');
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+function fmtDateLong(iso) {                          // → "Mon, Jun 8, 2026"
+  const d = new Date(iso + 'T00:00:00');
+  return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+}
+function todayISO() { return new Date().toISOString().slice(0, 10); }
+
+function density(reps, durationSec) {               // GS reps/min
+  if (!reps || !durationSec) return null;
+  return (reps / (durationSec / 60));
+}
+
+/* ---------- stat helpers (Dashboard) -------------------------------------- */
+function isThisMonth(iso) {
+  const d = new Date(iso + 'T00:00:00'), now = new Date();
+  return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+}
+function dashboardStats() {
+  const sessions = Store.getSessions();
+  const month = sessions.filter(s => isThisMonth(s.date));
+  const totalMin = month.reduce((a, s) => a + (s.duration || 0), 0) / 60;
+
+  // latest metrics + 7-most-recent series for sparklines
+  const recent = sessions.slice(0, 7).reverse();
+  const series = key => recent.map(s => s[key]).filter(v => v != null);
+  const last = arr => arr.length ? arr[arr.length - 1] : null;
+  const avg  = arr => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null;
+
+  const bw = series('bodyweight'), sl = series('sleep'), en = series('energy');
+
+  return {
+    monthCount: month.length,
+    gsCount: month.filter(s => s.type === 'gs').length,
+    gsMinutes: month.filter(s => s.type === 'gs').reduce((a, s) => a + (s.duration || 0), 0) / 60,
+    strengthCount: month.filter(s => s.type === 'strength').length,
+    bodyweight: last(bw), bwSeries: bw,
+    sleepAvg: avg(sl), sleepSeries: sl,
+    energyAvg: avg(en), energySeries: en,
+  };
+}
+// Best performance per exercise across all history (max reps for GS/GPP, max weight for lifts).
+function topPerformances() {
+  const sessions = Store.getSessions();
+  const best = {};   // key → {exercise, category, value, label, date}
+  sessions.forEach(s => (s.exercises || []).forEach(ex => {
+    const p = ex.params || {};
+    let metric = null, label = '';
+    if (ex.category === 'gs' || ex.category === 'gpp') {
+      if (p.reps) { metric = +p.reps; label = `${p.reps}`; }
+    } else if (ex.category === 'strength' || ex.category === 'accessory') {
+      if (p.weight) { metric = +p.weight; label = `${p.weight}${p.reps ? ' × ' + p.reps : ''}`; }
+    }
+    if (metric == null) return;
+    const key = ex.category + '|' + ex.exercise + (p.weight ? '|' + p.weight : '');
+    if (!best[key] || metric > best[key].value) {
+      best[key] = { exercise: ex.exercise, category: ex.category, value: metric, label, date: s.date,
+                    sub: p.weight ? `(${p.weight}kg)` : '' };
+    }
+  }));
+  return Object.values(best).sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 4);
+}
+
+/* ---------- sparkline (tiny inline SVG) ----------------------------------- */
+function sparkline(values, color) {
+  if (!values || values.length < 2) return '';
+  const w = 96, h = 34, min = Math.min(...values), max = Math.max(...values);
+  const span = (max - min) || 1;
+  const pts = values.map((v, i) => {
+    const x = (i / (values.length - 1)) * w;
+    const y = h - 4 - ((v - min) / span) * (h - 8);
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+  return `<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+    <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2"
+      stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+}
+
+/* ===========================================================================
+   SCREEN: DASHBOARD
+=========================================================================== */
+function renderDashboard() {
+  const s = dashboardStats();
+  const tops = topPerformances();
+  const recent = Store.getSessions().slice(0, 4);
+  const goals = Store.getGoals();
+
+  appEl.innerHTML = `
+    <header class="topbar">
+      <h1 class="screen-title">GS Training Log</h1>
+      <button class="round-add" id="add-session" aria-label="New session">+</button>
+    </header>
+
+    <section class="group">
+      <div class="group-label">Overview</div>
+      <div class="card overview">
+        <div class="ov-cell">
+          <div class="ov-icon" style="color:#0A84FF">📅</div>
+          <div class="ov-num">${s.monthCount}</div>
+          <div class="ov-sub">This Month</div>
+        </div>
+        <div class="ov-cell">
+          <div class="ov-icon" style="color:${catColor('gs')}">🟢</div>
+          <div class="ov-num" style="color:${catColor('gs')}">${s.gsCount}</div>
+          <div class="ov-sub">GS · ${fmtClock(s.gsMinutes * 60)}h</div>
+        </div>
+        <div class="ov-cell">
+          <div class="ov-icon" style="color:${catColor('strength')}">🟠</div>
+          <div class="ov-num" style="color:${catColor('strength')}">${s.strengthCount}</div>
+          <div class="ov-sub">Strength</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="group">
+      <div class="group-label">Key Metrics</div>
+      <div class="card metrics">
+        ${metricRow('Bodyweight', s.bodyweight, 'kg', s.bwSeries, '#0A84FF')}
+        ${metricRow('Sleep (7d avg)', s.sleepAvg, 'h', s.sleepSeries, '#BF5AF2')}
+        ${metricRow('Energy (7d avg)', s.energyAvg, '/10', s.energySeries, catColor('gs'))}
+      </div>
+    </section>
+
+    <section class="group">
+      <div class="group-label row-label">Top Performances</div>
+      <div class="card list">
+        ${tops.length ? tops.map(t => `
+          <div class="li">
+            <span class="li-glyph" style="color:${catColor(t.category)}">${catIcon(t.category)}</span>
+            <div class="li-main">
+              <div class="li-title">${t.exercise} ${t.sub}</div>
+              <div class="li-sub">Best · ${fmtDateShort(t.date)}</div>
+            </div>
+            <div class="li-value" style="color:${catColor(t.category)}">${t.label}</div>
+          </div>`).join('') : emptyRow('Log a session to see your bests here.')}
+      </div>
+    </section>
+
+    <section class="group">
+      <div class="group-label">Goal Progress</div>
+      <div class="card">
+        ${goals.length ? goals.map(goalBar).join('') : emptyRow('No goals yet — add one in Progress.')}
+      </div>
+    </section>
+
+    <section class="group">
+      <div class="group-label">Recent Sessions</div>
+      <div class="card list">
+        ${recent.length ? recent.map(sess => `
+          <button class="li tap" data-session="${sess.id}">
+            <span class="li-date">${fmtDateShort(sess.date)}</span>
+            <div class="li-main">
+              <div class="li-title">${catLabel(sess.type)} · ${sessionHeadline(sess)}</div>
+            </div>
+            <span class="li-value" style="color:${catColor(sess.type)}">${sessionMetric(sess)}</span>
+            <span class="chev">›</span>
+          </button>`).join('') : emptyRow('Tap + to log your first session.')}
+      </div>
+    </section>
+  `;
+
+  $('#add-session').onclick = () => navigate('newSession');
+  $$('[data-session]').forEach(b => b.onclick = () => navigate('session', { id: b.dataset.session }));
+}
+
+function metricRow(label, value, unit, series, color) {
+  const val = value == null ? '—' : (Number.isInteger(value) ? value : value.toFixed(1));
+  return `<div class="metric">
+    <div class="metric-left"><div class="metric-label">${label}</div>
+      <div class="metric-val">${val}<span class="metric-unit">${unit}</span></div></div>
+    ${sparkline(series, color)}
+  </div>`;
+}
+function goalBar(g) {
+  const pct = Math.min(100, Math.round((g.current / g.target) * 100));
+  const c = catColor(g.category);
+  return `<div class="goal">
+    <div class="goal-top">
+      <span class="goal-label">${g.label}</span>
+      <span class="goal-nums">${g.current} / ${g.target} <span class="goal-unit">${g.unit || ''}</span></span>
+    </div>
+    <div class="bar"><div class="bar-fill" style="width:${pct}%;background:${c}"></div></div>
+  </div>`;
+}
+function sessionHeadline(sess) {
+  const first = (sess.exercises || [])[0];
+  return first ? first.exercise : (sess.notes ? sess.notes.slice(0, 24) : 'Session');
+}
+function sessionMetric(sess) {
+  const first = (sess.exercises || [])[0];
+  if (first && (first.category === 'gs' || first.category === 'gpp') && first.params.reps)
+    return `${first.params.reps} reps`;
+  return fmtDuration(sess.duration || 0).replace(/^00:/, '') + 'm';
+}
+function emptyRow(text) { return `<div class="empty">${text}</div>`; }
+
+/* ===========================================================================
+   SCREEN: SESSIONS (history list)
+=========================================================================== */
+function renderSessions() {
+  const sessions = Store.getSessions();
+  appEl.innerHTML = `
+    <header class="topbar">
+      <h1 class="screen-title">Sessions</h1>
+      <button class="round-add" id="add-session" aria-label="New session">+</button>
+    </header>
+    <section class="group">
+      <div class="card list">
+        ${sessions.length ? sessions.map(sess => `
+          <button class="li tap" data-session="${sess.id}">
+            <span class="li-glyph" style="color:${catColor(sess.type)}">${catIcon(sess.type)}</span>
+            <div class="li-main">
+              <div class="li-title">${catLabel(sess.type)} · ${sessionHeadline(sess)}</div>
+              <div class="li-sub">${fmtDateLong(sess.date)} · ${fmtDuration(sess.duration || 0)}</div>
+            </div>
+            <span class="chev">›</span>
+          </button>`).join('') : emptyRow('No sessions yet.')}
+      </div>
+    </section>`;
+  $('#add-session').onclick = () => navigate('newSession');
+  $$('[data-session]').forEach(b => b.onclick = () => navigate('session', { id: b.dataset.session }));
+}
+
+/* ===========================================================================
+   SCREEN: SESSION DETAIL (review) — header card + exercise cards
+=========================================================================== */
+function renderSessionDetail(id) {
+  const sess = Store.getSession(id);
+  if (!sess) return navigate('sessions');
+
+  appEl.innerHTML = `
+    <header class="topbar nav">
+      <button class="back" id="back">‹ Sessions</button>
+      <h2 class="nav-title">${fmtDateLong(sess.date)}</h2>
+      <button class="link danger" id="del">Delete</button>
+    </header>
+
+    <section class="group">
+      <div class="card kv" style="border-left:3px solid ${catColor(sess.type)}">
+        ${kv('Type', `<span style="color:${catColor(sess.type)}">${catLabel(sess.type)}</span>`)}
+        ${kv('Duration', fmtDuration(sess.duration || 0))}
+        ${sess.sleep != null ? kv('Sleep', `${sess.sleep} / 10`) : ''}
+        ${sess.energy != null ? kv('Energy', `${sess.energy} / 10`) : ''}
+        ${sess.bodyweight != null ? kv('Bodyweight', `${sess.bodyweight} kg`) : ''}
+        ${sess.notes ? `<div class="kv-notes">${escapeHtml(sess.notes)}</div>` : ''}
+      </div>
+    </section>
+
+    <section class="group">
+      <div class="group-label row-label">Exercises</div>
+      ${(sess.exercises || []).map(ex => exerciseCard(ex)).join('') || emptyRow('No exercises logged.')}
+    </section>
+
+    <div class="actions">
+      <button class="btn primary" id="add-ex">+ Add Exercise</button>
+    </div>
+  `;
+
+  $('#back').onclick = () => navigate('sessions');
+  $('#add-ex').onclick = () => navigate('addExercise', { sessionId: sess.id, category: sess.type });
+  $('#del').onclick = () => {
+    if (confirm('Delete this session?')) { Store.deleteSession(sess.id); navigate('sessions'); }
+  };
+}
+
+function exerciseCard(ex) {
+  const c = catColor(ex.category), p = ex.params || {};
+  const marker = ex.result ? RESULT_MARKERS.find(m => m.key === ex.result) : null;
+
+  // Build the small stat grid depending on category.
+  let grid = '';
+  if (ex.category === 'gs') {
+    const dens = density(+p.reps, p.duration);
+    grid = statGrid([
+      ['Weight', p.weight != null ? `${p.weight} kg` : '—'],
+      ['Duration', p.duration != null ? fmtClock(p.duration) : '—'],
+      ['RPM (avg)', p.rpm ?? '—'],
+      ['Reps', p.reps ?? '—'],
+      ['RPE', p.rpe != null ? `${p.rpe}/10` : '—'],
+      ['Density', dens != null ? `${dens.toFixed(1)} /min` : '—'],
+    ]);
+  } else if (ex.category === 'strength' || ex.category === 'accessory') {
+    grid = statGrid([
+      ['Weight', p.weight != null ? `${p.weight} kg` : '—'],
+      ['Sets × Reps', `${p.sets ?? '—'} × ${p.reps ?? '—'}`],
+      ['Rest', p.rest ? `${p.rest}s` : '—'],
+      ['RPE', p.rpe != null ? `${p.rpe}/10` : '—'],
+    ]);
+  } else if (ex.category === 'gpp') {
+    grid = statGrid([
+      ['Weight', p.weight != null && p.weight !== '' ? `${p.weight} kg` : '—'],
+      ['Sets × Reps', `${p.sets ?? '—'} × ${p.reps ?? '—'}`],
+      ['Dist / Time', p.distance || '—'],
+      ['Rest', p.rest ? `${p.rest}s` : '—'],
+    ]);
+  } else if (ex.category === 'technique') {
+    grid = statGrid([
+      ['Focus', p.focus || '—'],
+      ['Quality', p.quality != null ? `${p.quality}/10` : '—'],
+    ]);
+  }
+
+  const remarks = ex.category === 'technique'
+    ? [p.observations && `Obs: ${p.observations}`, p.nextAction && `Next: ${p.nextAction}`].filter(Boolean).join('\n')
+    : ex.remarks;
+
+  return `<div class="card ex" style="border-left:3px solid ${c}">
+    <div class="ex-head">
+      <span class="ex-glyph" style="color:${c}">${catIcon(ex.category)}</span>
+      <span class="ex-name">${escapeHtml(ex.exercise)}</span>
+      ${marker ? `<span class="marker" style="background:${marker.color}">${marker.label}</span>` : ''}
+    </div>
+    ${grid}
+    ${remarks ? `<div class="ex-remarks">${escapeHtml(remarks).replace(/\n/g, '<br>')}</div>` : ''}
+  </div>`;
+}
+function statGrid(pairs) {
+  return `<div class="stat-grid">${pairs.map(([k, v]) =>
+    `<div class="stat"><div class="stat-k">${k}</div><div class="stat-v">${v}</div></div>`).join('')}</div>`;
+}
+function kv(k, v) { return `<div class="kv-row"><span class="kv-k">${k}</span><span class="kv-v">${v}</span></div>`; }
+
+/* ===========================================================================
+   SCREEN: NEW SESSION (header form) — creates a session, then go log exercises
+=========================================================================== */
+function renderNewSession() {
+  const cats = Object.values(CATEGORIES);
+  appEl.innerHTML = `
+    <header class="topbar nav">
+      <button class="back" id="cancel">Cancel</button>
+      <h2 class="nav-title">New Session</h2>
+      <button class="link strong" id="start">Start</button>
+    </header>
+
+    <section class="group">
+      <div class="group-label">Session Type</div>
+      <div class="seg" id="type-seg">
+        ${cats.map((c, i) => `<button class="seg-btn ${i === 0 ? 'on' : ''}" data-type="${c.key}"
+            style="--c:${c.color}">${c.label}</button>`).join('')}
+      </div>
+    </section>
+
+    <section class="group">
+      <div class="card form">
+        ${inputRow('date', 'Date', 'date', todayISO())}
+        ${inputRow('sleep', 'Sleep', 'number', '', '/10')}
+        ${inputRow('energy', 'Energy', 'number', '', '/10')}
+        ${inputRow('bodyweight', 'Bodyweight', 'number', '', 'kg')}
+      </div>
+      <div class="card form">
+        <textarea id="notes" class="ta" placeholder="Notes — how you slept, mood, plan for today…"></textarea>
+      </div>
+    </section>
+  `;
+
+  let chosenType = cats[0].key;
+  $$('#type-seg .seg-btn').forEach(b => b.onclick = () => {
+    $$('#type-seg .seg-btn').forEach(x => x.classList.remove('on'));
+    b.classList.add('on'); chosenType = b.dataset.type;
+  });
+  $('#cancel').onclick = () => navigate('dashboard');
+  $('#start').onclick = () => {
+    const session = {
+      id: Store.uid(),
+      date: $('#date').value || todayISO(),
+      type: chosenType,
+      duration: 0,
+      sleep: numOrNull($('#sleep').value),
+      energy: numOrNull($('#energy').value),
+      bodyweight: numOrNull($('#bodyweight').value),
+      notes: $('#notes').value.trim(),
+      exercises: [],
+    };
+    Store.saveSession(session);
+    navigate('session', { id: session.id });   // straight into logging
+  };
+}
+
+/* ===========================================================================
+   SCREEN: ADD EXERCISE (dynamic fields by category) — the heart of the app
+=========================================================================== */
+function renderAddExercise(sessionId, category, prefill) {
+  const sess = Store.getSession(sessionId);
+  if (!sess) return navigate('sessions');
+  const cats = Object.values(CATEGORIES);
+  let cat = category || sess.type;
+
+  function paint() {
+    const fields = FIELDS[cat];
+    const exList = EXERCISES[cat];
+
+    appEl.innerHTML = `
+      <header class="topbar nav">
+        <button class="back" id="cancel">Cancel</button>
+        <h2 class="nav-title">Add Exercise</h2>
+        <button class="link strong" id="save">Save</button>
+      </header>
+
+      <div class="cat-tabs" id="cat-tabs">
+        ${cats.map(c => `<button class="cat-tab ${c.key === cat ? 'on' : ''}" data-cat="${c.key}"
+            style="--c:${c.color}"><span class="cat-glyph">${c.icon}</span>${c.label}</button>`).join('')}
+      </div>
+
+      <section class="group">
+        <div class="card form">
+          <div class="field">
+            <label class="field-label">Exercise</label>
+            <select id="f-exercise" class="field-input select">
+              ${exList.map(e => `<option ${prefill && prefill.exercise === e ? 'selected' : ''}>${e}</option>`).join('')}
+            </select>
+          </div>
+          ${fields.map(f => fieldRow(f, prefill && prefill.params ? prefill.params[f.key] : undefined,
+                                     prefill ? prefill.result : undefined)).join('')}
+        </div>
+
+        ${cat === 'gs' ? `<div class="actions tight">
+          <button class="btn ghost" id="use-timer" style="--c:${catColor('gs')}">▶ Use GS Timer</button>
+        </div>` : ''}
+      </section>
+    `;
+
+    // category switch
+    $$('#cat-tabs .cat-tab').forEach(b => b.onclick = () => { cat = b.dataset.cat; paint(); });
+    $('#cancel').onclick = () => navigate('session', { id: sessionId });
+    $('#save').onclick = save;
+    if ($('#use-timer')) $('#use-timer').onclick = () => {
+      // carry current weight/duration into the timer setup
+      const weight = numOrNull(($('[data-key="weight"]') || {}).value);
+      navigate('timer', { sessionId, exercise: $('#f-exercise').value, weight });
+    };
+  }
+
+  function save() {
+    const params = collectFields(cat);
+    const ex = {
+      id: Store.uid(),
+      category: cat,
+      exercise: $('#f-exercise').value,
+      params,
+      result: params.__result || '',
+      remarks: params.remarks || params.observations || '',
+    };
+    delete params.__result;
+    const fresh = Store.getSession(sessionId);
+    fresh.exercises.push(ex);
+    Store.saveSession(fresh);
+    navigate('session', { id: sessionId });
+  }
+
+  paint();
+}
+
+/* ---------- dynamic field rendering + collection -------------------------- */
+function fieldRow(f, value, resultValue) {
+  const v = value == null ? '' : value;
+  switch (f.type) {
+    case 'duration': {
+      const mm = v ? Math.floor(v / 60) : '', ss = v ? v % 60 : '';
+      return wrap(f, `<div class="dual" data-key="${f.key}" data-type="duration">
+        <input class="mini" inputmode="numeric" placeholder="mm" data-part="m" value="${mm}">
+        <span class="sep">:</span>
+        <input class="mini" inputmode="numeric" placeholder="ss" data-part="s" value="${ss}"></div>`);
+    }
+    case 'workrest':
+      return wrap(f, `<div class="dual" data-key="${f.key}" data-type="workrest">
+        <input class="mini" inputmode="numeric" placeholder="work" data-part="w">
+        <span class="sep">/</span>
+        <input class="mini" inputmode="numeric" placeholder="rest" data-part="r"></div>`);
+    case 'rpe':
+      return wrap(f, `<input class="field-input num" data-key="${f.key}" data-type="rpe"
+        inputmode="numeric" min="1" max="10" type="number" value="${v}" placeholder="–">
+        <span class="suffix">/10</span>`);
+    case 'result':
+      return wrap(f, `<div class="markers" data-key="${f.key}" data-type="result">
+        ${RESULT_MARKERS.map(m => `<button type="button" class="mk ${resultValue === m.key ? 'on' : ''}"
+          data-result="${m.key}" style="--c:${m.color}">${m.label}</button>`).join('')}</div>`);
+    case 'textarea':
+      return `<div class="field col"><label class="field-label">${f.label}</label>
+        <textarea class="ta" data-key="${f.key}" data-type="text" placeholder="${f.placeholder || ''}">${escapeHtml(v)}</textarea></div>`;
+    case 'select':
+      return wrap(f, `<select class="field-input select" data-key="${f.key}" data-type="text">
+        ${(f.options || []).map(o => `<option ${v === o ? 'selected' : ''}>${o}</option>`).join('')}</select>`);
+    default: // number / text
+      return wrap(f, `<input class="field-input ${f.type === 'number' ? 'num' : ''}"
+        data-key="${f.key}" data-type="${f.type}" inputmode="${f.type === 'number' ? 'decimal' : 'text'}"
+        value="${escapeHtml(v)}" placeholder="${f.placeholder || ''}">
+        ${f.unit ? `<span class="suffix">${f.unit}</span>` : ''}`);
+  }
+}
+function wrap(f, inner) {
+  return `<div class="field"><label class="field-label">${f.label}</label>
+    <div class="field-control">${inner}</div></div>`;
+}
+
+function collectFields(category) {
+  const out = {};
+  $$('[data-key]').forEach(el => {
+    const key = el.dataset.key, type = el.dataset.type;
+    if (type === 'duration') {
+      const m = +($('[data-part="m"]', el).value || 0), s = +($('[data-part="s"]', el).value || 0);
+      if (m || s) out[key] = m * 60 + s;
+    } else if (type === 'workrest') {
+      const w = $('[data-part="w"]', el).value, r = $('[data-part="r"]', el).value;
+      if (w || r) out[key] = { work: +w || 0, rest: +r || 0 };
+    } else if (type === 'result') {
+      const on = $('.mk.on', el);
+      out.__result = on ? on.dataset.result : '';
+    } else {
+      const val = el.value.trim();
+      if (val === '') return;
+      out[key] = (type === 'number' || type === 'rpe') ? +val : val;
+    }
+  });
+  return out;
+}
+// wire result markers (delegated, since they can be repainted)
+document.addEventListener('click', e => {
+  const mk = e.target.closest('.mk');
+  if (!mk) return;
+  const group = mk.parentElement;
+  const wasOn = mk.classList.contains('on');
+  $$('.mk', group).forEach(x => x.classList.remove('on'));
+  if (!wasOn) mk.classList.add('on');     // tap again to clear
+});
+
+/* ===========================================================================
+   SCREEN: GS TIMER  (the signature feature)
+=========================================================================== */
+function renderTimer(params) {
+  const sessionId = params.sessionId || null;
+  const exercise  = params.exercise || 'Long Cycle';
+  const weight    = params.weight != null ? params.weight : 24;
+
+  // setup defaults — editable on the ready screen
+  let targetSec = 600;      // 10:00
+  let targetReps = 70;
+  const c = catColor('gs');
+
+  function ready() {
+    appEl.innerHTML = `
+      <header class="topbar nav">
+        <button class="back" id="cancel">Cancel</button>
+        <h2 class="nav-title">GS Timer</h2><span></span>
+      </header>
+      <div class="timer-ready">
+        <div class="ready-word">READY?</div>
+        <div class="ready-ex" style="color:${c}">${escapeHtml(exercise)}</div>
+        <div class="ready-weight">${weight} kg</div>
+
+        <div class="ready-config">
+          <label>Duration
+            <div class="dual">
+              <input id="t-min" class="mini" inputmode="numeric" value="${Math.floor(targetSec/60)}">
+              <span class="sep">:</span>
+              <input id="t-sec" class="mini" inputmode="numeric" value="${pad(targetSec%60)}">
+            </div>
+          </label>
+          <label>Target reps
+            <input id="t-reps" class="mini wide" inputmode="numeric" value="${targetReps}">
+          </label>
+        </div>
+        <div class="ready-pace">Target pace: <b style="color:${c}">${(targetReps/(targetSec/60)).toFixed(1)} RPM</b></div>
+
+        <button class="btn big" id="go" style="--c:${c}">START</button>
+        <div class="ready-hint">Whistle plays at start, half, and finish.</div>
+      </div>`;
+    $('#cancel').onclick = () => sessionId ? navigate('addExercise', { sessionId, category: 'gs', prefill: null }) : navigate('dashboard');
+    $('#go').onclick = () => {
+      targetSec = (+$('#t-min').value || 0) * 60 + (+$('#t-sec').value || 0);
+      targetReps = +$('#t-reps').value || 0;
+      run();
+    };
+  }
+
+  function run() {
+    let reps = 0;
+    appEl.innerHTML = `
+      <div class="timer-live" style="--c:${c}">
+        <div class="live-ex">${escapeHtml(exercise)} · ${weight}kg</div>
+        <div class="live-clock" id="clock">${fmtClock(targetSec)}</div>
+        <div class="live-row">
+          <div class="live-stat"><div class="ls-num" id="minute">1</div><div class="ls-lab">Minute</div></div>
+          <div class="live-stat"><div class="ls-num" id="reps">0</div><div class="ls-lab">Reps</div></div>
+          <div class="live-stat"><div class="ls-num" id="proj">0</div><div class="ls-lab">Projected</div></div>
+        </div>
+        <div class="live-target">Target: ${targetReps} reps</div>
+        <button class="rep-btn" id="rep" style="--c:${c}">+1 REP</button>
+        <button class="btn end" id="end">End Set</button>
+      </div>`;
+
+    playWhistle();   // referee start
+
+    const total = targetSec;
+    liveTimer = new GSTimer({
+      mode: 'down', target: total,
+      onHalf: () => playSwitchCue(),
+      onTick: (elapsed, remaining) => {
+        $('#clock').textContent = fmtClock(remaining);
+        const min = Math.min(Math.ceil(elapsed / 60) || 1, Math.ceil(total / 60));
+        $('#minute').textContent = min;
+        const elapsedMin = Math.max(elapsed / 60, 0.0001);
+        $('#proj').textContent = Math.round(reps / elapsedMin * (total / 60));
+        if (remaining < 4) $('#clock').classList.add('flash');
+      },
+      onDone: () => { playWhistle(); finish(reps, total); },
+    });
+    liveTimer.start();
+
+    $('#rep').onclick = () => { reps++; $('#reps').textContent = reps; };
+    $('#end').onclick = () => {
+      const elapsed = Math.round(liveTimer.elapsed());
+      liveTimer.stop(); liveTimer = null;
+      finish(reps, elapsed || total);
+    };
+  }
+
+  // After the set: build params and hand them to the Add Exercise screen pre-filled.
+  function finish(reps, durationSec) {
+    const rpm = reps ? (reps / (durationSec / 60)) : 0;
+    appEl.innerHTML = `
+      <header class="topbar nav"><span></span><h2 class="nav-title">Set Complete</h2><span></span></header>
+      <div class="timer-done">
+        <div class="done-check" style="color:${c}">✓</div>
+        <div class="stat-grid wide">
+          <div class="stat"><div class="stat-k">Reps</div><div class="stat-v">${reps}</div></div>
+          <div class="stat"><div class="stat-k">Duration</div><div class="stat-v">${fmtClock(durationSec)}</div></div>
+          <div class="stat"><div class="stat-k">Avg RPM</div><div class="stat-v">${rpm.toFixed(1)}</div></div>
+          <div class="stat"><div class="stat-k">Density</div><div class="stat-v">${rpm.toFixed(1)}/min</div></div>
+        </div>
+        <button class="btn primary" id="log" style="--c:${c}">Add to Session →</button>
+        ${sessionId ? '' : '<div class="ready-hint">No open session — this will start one.</div>'}
+      </div>`;
+    $('#log').onclick = () => {
+      let sid = sessionId;
+      if (!sid) {   // no session open → make a GS session on the spot
+        const s = { id: Store.uid(), date: todayISO(), type: 'gs', duration: durationSec,
+                    sleep: null, energy: null, bodyweight: null, notes: '', exercises: [] };
+        Store.saveSession(s); sid = s.id;
+      }
+      navigate('addExercise', {
+        sessionId: sid, category: 'gs',
+        prefill: { exercise, result: '', params: { weight, duration: durationSec, reps, rpm: +rpm.toFixed(1) } },
+      });
+    };
+  }
+
+  ready();
+}
+
+/* ===========================================================================
+   SCREEN: PROGRESS (goals: view / add / edit)
+=========================================================================== */
+function renderProgress() {
+  const goals = Store.getGoals();
+  appEl.innerHTML = `
+    <header class="topbar">
+      <h1 class="screen-title">Progress</h1>
+      <button class="round-add" id="add-goal" aria-label="New goal">+</button>
+    </header>
+    <section class="group">
+      <div class="group-label">Goals</div>
+      <div class="card">
+        ${goals.length ? goals.map(g => `
+          <div class="goal editable">
+            <button class="goal-del" data-del="${g.id}" aria-label="Delete goal">×</button>
+            ${goalBar(g)}
+            <div class="goal-edit">
+              <label>Now <input class="mini" data-cur="${g.id}" inputmode="decimal" value="${g.current}"></label>
+              <label>Target <input class="mini" data-tar="${g.id}" inputmode="decimal" value="${g.target}"></label>
+            </div>
+          </div>`).join('') : emptyRow('No goals yet.')}
+      </div>
+    </section>`;
+
+  $('#add-goal').onclick = addGoal;
+  $$('[data-del]').forEach(b => b.onclick = () => { Store.deleteGoal(b.dataset.del); renderProgress(); });
+  // live-edit current/target
+  $$('[data-cur]').forEach(i => i.onchange = () => updateGoal(i.dataset.cur, { current: +i.value }));
+  $$('[data-tar]').forEach(i => i.onchange = () => updateGoal(i.dataset.tar, { target: +i.value }));
+
+  function updateGoal(id, patch) {
+    const g = Store.getGoals().find(x => x.id === id);
+    if (g) { Store.saveGoal(Object.assign(g, patch)); renderProgress(); }
+  }
+  function addGoal() {
+    const label = prompt('Goal name (e.g. "Jerk 28kg 10\'")'); if (!label) return;
+    const cat = (prompt('Category: gs / strength / gpp / accessory / technique', 'gs') || 'gs').toLowerCase();
+    const target = +prompt('Target number', '100') || 100;
+    const unit = prompt('Unit (reps / kg)', 'reps') || 'reps';
+    Store.saveGoal({ id: Store.uid(), label, category: CATEGORIES[cat] ? cat : 'gs', current: 0, target, unit });
+    renderProgress();
+  }
+}
+
+/* ===========================================================================
+   SCREEN: MORE (settings + export / import / reset)
+=========================================================================== */
+function renderMore() {
+  const set = Store.getSettings();
+  appEl.innerHTML = `
+    <header class="topbar"><h1 class="screen-title">More</h1></header>
+    <section class="group">
+      <div class="group-label">Timer Sound</div>
+      <div class="card form">
+        ${toggleRow('whistle', 'Whistle at start & end', set.whistle)}
+        ${toggleRow('switchWhistle', 'Cue at half (hand switch)', set.switchWhistle)}
+        <div class="field"><span class="field-label">Test</span>
+          <button class="btn ghost sm" id="test-whistle">Play whistle</button></div>
+      </div>
+    </section>
+    <section class="group">
+      <div class="group-label">Data</div>
+      <div class="card form">
+        <div class="field"><span class="field-label">Export</span>
+          <button class="btn ghost sm" id="export">Download JSON</button></div>
+        <div class="field"><span class="field-label">Import</span>
+          <label class="btn ghost sm">Choose file<input id="import" type="file" accept="application/json" hidden></label></div>
+        <div class="field"><span class="field-label">Demo data</span>
+          <button class="btn ghost sm danger" id="reset">Reset to demo</button></div>
+      </div>
+      <div class="group-label foot">GS Training Log · local-only · v1</div>
+    </section>`;
+
+  $('#whistle').onchange = e => Store.saveSettings({ whistle: e.target.checked });
+  $('#switchWhistle').onchange = e => Store.saveSettings({ switchWhistle: e.target.checked });
+  $('#test-whistle').onclick = () => { Store.saveSettings({ whistle: true }); playWhistle(); };
+  $('#export').onclick = () => {
+    const blob = new Blob([Store.exportJSON()], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `gs-log-${todayISO()}.json`; a.click();
+  };
+  $('#import').onchange = e => {
+    const file = e.target.files[0]; if (!file) return;
+    const r = new FileReader();
+    r.onload = () => { try { Store.importJSON(r.result); alert('Imported.'); navigate('dashboard'); }
+                       catch { alert('That file could not be read.'); } };
+    r.readAsText(file);
+  };
+  $('#reset').onclick = () => {
+    if (!confirm('Replace all data with demo data?')) return;
+    localStorage.removeItem('gslog.sessions'); localStorage.removeItem('gslog.goals');
+    Store.seedDemoIfEmpty(); navigate('dashboard');
+  };
+}
+function toggleRow(id, label, on) {
+  return `<div class="field"><span class="field-label">${label}</span>
+    <label class="switch"><input id="${id}" type="checkbox" ${on ? 'checked' : ''}><span class="slider"></span></label></div>`;
+}
+
+/* ---------- small generic input row (new-session form) -------------------- */
+function inputRow(id, label, type, value = '', unit = '') {
+  return `<div class="field"><label class="field-label" for="${id}">${label}</label>
+    <div class="field-control">
+      <input id="${id}" class="field-input ${type === 'number' ? 'num' : ''}" type="${type}"
+        inputmode="${type === 'number' ? 'decimal' : 'text'}" value="${value}">
+      ${unit ? `<span class="suffix">${unit}</span>` : ''}
+    </div></div>`;
+}
+
+/* ---------- utils --------------------------------------------------------- */
+function numOrNull(v) { v = (v || '').toString().trim(); return v === '' ? null : +v; }
+function escapeHtml(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+/* ===========================================================================
+   TAB BAR + ROUTER
+=========================================================================== */
+const TABS = [
+  { view: 'dashboard', label: 'Dashboard', icon: '🏠' },
+  { view: 'sessions',  label: 'Sessions',  icon: '🗒️' },
+  { view: 'timer',     label: 'Timer',     icon: '⏱️' },   // center = signature feature
+  { view: 'progress',  label: 'Progress',  icon: '📈' },
+  { view: 'more',      label: 'More',       icon: '•••' },
+];
+function renderTabbar() {
+  // which top-level tab is "active" (detail screens map back to a parent)
+  const active = { session: 'sessions', newSession: 'sessions', addExercise: 'sessions' }[state.view] || state.view;
+  tabbarEl.innerHTML = TABS.map(t => `
+    <button class="tab ${t.view === active ? 'on' : ''}" data-view="${t.view}">
+      <span class="tab-icon">${t.icon}</span><span class="tab-label">${t.label}</span>
+    </button>`).join('');
+  $$('.tab', tabbarEl).forEach(b => b.onclick = () => navigate(b.dataset.view));
+}
+
+function render() {
+  switch (state.view) {
+    case 'dashboard':   renderDashboard(); break;
+    case 'sessions':    renderSessions(); break;
+    case 'session':     renderSessionDetail(state.params.id); break;
+    case 'newSession':  renderNewSession(); break;
+    case 'addExercise': renderAddExercise(state.params.sessionId, state.params.category, state.params.prefill); break;
+    case 'timer':       renderTimer(state.params); break;
+    case 'progress':    renderProgress(); break;
+    case 'more':        renderMore(); break;
+    default:            renderDashboard();
+  }
+  renderTabbar();
+}
+
+/* ---------- boot ---------------------------------------------------------- */
+Store.seedDemoIfEmpty();   // remove this line to start with an empty app
+render();
+
+  </script>
 </body>
 </html>
